@@ -2297,8 +2297,68 @@ class UnfurlTest(TestCase):
         assert api_params["dataset"] == "logs"
         assert api_params["yAxis"] == "sum(payload_size)"
 
-    def test_map_explore_query_args_logs_query_and_sort(self) -> None:
-        url = f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/?aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D&logsQuery=severity%3Aerror&logsSortBys=-timestamp&project={self.project.id}&statsPeriod=24h"
+    def test_map_explore_query_args_logs_ignores_table_sort_for_chart(self) -> None:
+        # `logsSortBys` is the samples-mode logs table sort (typically
+        # `-timestamp`). The unfurl is rendering the chart, not the table, so
+        # the table sort must not leak into the events-timeseries `sort` param —
+        # it would feed topEvents a non-aggregate field and return no data.
+        url = (
+            f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/"
+            "?aggregateField=%7B%22groupBy%22%3A%22browser.name%22%7D"
+            "&aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D"
+            "&logsSortBys=-timestamp&mode=aggregate"
+            f"&project={self.project.id}&statsPeriod=7d"
+        )
+        link_type, args = match_link(url)
+
+        assert link_type == LinkType.EXPLORE
+        assert args is not None
+        assert args["query"].getlist("groupBy") == ["browser.name"]
+        # logsSortBys is ignored — `unfurl_explore` will default to
+        # `-count(message)` for the topEvents sort.
+        assert args["query"].getlist("sort") == []
+
+    def test_map_explore_query_args_logs_uses_aggregate_sort(self) -> None:
+        # `logsAggregateSortBys` is the aggregate-mode chart sort. When it
+        # references the active yAxis it should be forwarded to
+        # events-timeseries as the topEvents sort.
+        url = (
+            f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/"
+            "?aggregateField=%7B%22groupBy%22%3A%22severity%22%7D"
+            "&aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D"
+            "&logsAggregateSortBys=-count(message)&mode=aggregate"
+            f"&project={self.project.id}&statsPeriod=7d"
+        )
+        link_type, args = match_link(url)
+
+        assert link_type == LinkType.EXPLORE
+        assert args is not None
+        assert args["query"].getlist("sort") == ["-count(message)"]
+
+    def test_map_explore_query_args_logs_drops_stale_aggregate_sort(self) -> None:
+        # If `logsAggregateSortBys` references a function that isn't in the
+        # active yAxes/groupBys, drop it so the unfurl falls back to
+        # `-yAxes[0]`, mirroring the frontend's validateAggregateSort.
+        url = (
+            f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/"
+            "?aggregateField=%7B%22groupBy%22%3A%22severity%22%7D"
+            "&aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D"
+            "&logsAggregateSortBys=-p95(message.length)&mode=aggregate"
+            f"&project={self.project.id}&statsPeriod=7d"
+        )
+        link_type, args = match_link(url)
+
+        assert link_type == LinkType.EXPLORE
+        assert args is not None
+        assert args["query"].getlist("sort") == []
+
+    def test_map_explore_query_args_logs_query(self) -> None:
+        url = (
+            f"https://sentry.io/organizations/{self.organization.slug}/explore/logs/"
+            "?aggregateField=%7B%22yAxes%22%3A%5B%22count(message)%22%5D%7D"
+            "&logsQuery=severity%3Aerror"
+            f"&project={self.project.id}&statsPeriod=24h"
+        )
         link_type, args = match_link(url)
 
         if not args or not link_type:
@@ -2307,7 +2367,6 @@ class UnfurlTest(TestCase):
         assert link_type == LinkType.EXPLORE
         assert args["dataset"] == SupportedTraceItemType.LOGS
         assert args["query"]["query"] == "severity:error"
-        assert args["query"]["sort"] == "-timestamp"
         assert args["query"]["yAxis"] == "count(message)"
 
     def test_map_explore_query_args_spans_query_and_sort(self) -> None:
