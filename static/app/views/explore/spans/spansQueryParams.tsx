@@ -18,7 +18,6 @@ import {
   isGroupBy,
 } from 'sentry/views/explore/queryParams/groupBy';
 import {getModeFromLocation} from 'sentry/views/explore/queryParams/mode';
-import {getQueryFromLocation} from 'sentry/views/explore/queryParams/query';
 import {ReadableQueryParams} from 'sentry/views/explore/queryParams/readableQueryParams';
 import {
   getIdFromLocation,
@@ -63,7 +62,7 @@ export function getReadableQueryParamsFromLocation(
 ): ReadableQueryParams {
   const extrapolate = decodeScalar(location.query?.[SPANS_EXTRAPOLATE_KEY], '1') === '1';
   const mode = getModeFromLocation(location, SPANS_MODE_KEY);
-  const query = getQueryFromLocation(location, SPANS_QUERY_KEY) ?? '';
+  const query = decodeScalar(location.query[SPANS_QUERY_KEY]) ?? '';
 
   const cursor = getCursorFromLocation(location, SPANS_CURSOR_KEY);
   const fields = getFieldsFromLocation(location, SPANS_FIELD_KEY) ?? defaultFields();
