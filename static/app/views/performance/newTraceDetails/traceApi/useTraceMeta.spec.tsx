@@ -142,8 +142,7 @@ describe('useTraceMeta', () => {
         spansCountMap: {
           op1: 1,
         },
-        transactionChildCountMap: {'1': 1},
-        transactionsCount: 1,
+        transactionChildCountMap: [{'transaction.event_id': '1', 'count()': 1}],
         uptimeCount: 0,
       },
     });
@@ -160,8 +159,7 @@ describe('useTraceMeta', () => {
           op1: 1,
           op2: 1,
         },
-        transactionChildCountMap: {'2': 2},
-        transactionsCount: 1,
+        transactionChildCountMap: [{'transaction.event_id': '2', 'count()': 2}],
         uptimeCount: 0,
       },
     });
@@ -177,8 +175,7 @@ describe('useTraceMeta', () => {
         spansCountMap: {
           op3: 1,
         },
-        transactionChildCountMap: {'3': 1},
-        transactionsCount: 1,
+        transactionChildCountMap: [{'transaction.event_id': '3', 'count()': 1}],
         uptimeCount: 1,
       },
     });
@@ -214,12 +211,62 @@ describe('useTraceMeta', () => {
           '2': 2,
           '3': 1,
         },
-        transactionsCount: 3,
         uptimeCount: 1,
       },
       errors: [],
       isLoading: false,
       status: 'success',
+    });
+  });
+
+  it('EAP - accepts trace meta without transactionsCount', async () => {
+    const org = OrganizationFixture({
+      features: ['trace-spans-format'],
+    });
+    const trace = {traceSlug: 'slug-without-transactions-count', timestamp: 1};
+
+    jest.mocked(useSyncedLocalStorageState).mockReturnValue(['eap', jest.fn()]);
+
+    MockApiClient.addMockResponse({
+      method: 'GET',
+      url: '/organizations/org-slug/trace-meta/slug-without-transactions-count/',
+      body: {
+        errorsCount: 0,
+        logsCount: 5,
+        metricsCount: 1,
+        performanceIssuesCount: 0,
+        spansCount: 529,
+        transactionChildCountMap: [
+          {'transaction.event_id': '2b6107aa9d5f49c7a100babc02e903a0', 'count()': 62},
+          {'transaction.event_id': null, 'count()': 1},
+        ],
+        spansCountMap: {
+          processor: 113,
+        },
+        uptimeCount: 0,
+      },
+    });
+
+    const {result} = renderHookWithProviders(useTraceMeta, {
+      organization: org,
+      initialProps: [trace],
+    });
+
+    await waitFor(() => expect(result.current.status === 'success').toBe(true));
+
+    expect(result.current.data).toEqual({
+      errorsCount: 0,
+      logsCount: 5,
+      metricsCount: 1,
+      performanceIssuesCount: 0,
+      spansCount: 529,
+      spansCountMap: {
+        processor: 113,
+      },
+      transactionChildCountMap: {
+        '2b6107aa9d5f49c7a100babc02e903a0': 62,
+      },
+      uptimeCount: 0,
     });
   });
 
@@ -288,8 +335,7 @@ describe('useTraceMeta', () => {
       performanceIssuesCount: 0,
       spansCount: 0,
       spansCountMap: {},
-      transactionChildCountMap: {},
-      transactionsCount: 0,
+      transactionChildCountMap: [],
       uptimeCount: 0,
     };
 
@@ -313,8 +359,7 @@ describe('useTraceMeta', () => {
       performanceIssuesCount: 1,
       spansCount: 1,
       spansCountMap: {op1: 1},
-      transactionChildCountMap: {tx1: 1},
-      transactionsCount: 1,
+      transactionChildCountMap: [{'transaction.event_id': 'tx1', 'count()': 1}],
       uptimeCount: 0,
     };
 
@@ -364,8 +409,7 @@ describe('useTraceMeta', () => {
         performanceIssuesCount: 1,
         spansCount: 1,
         spansCountMap: {op1: 1},
-        transactionChildCountMap: {},
-        transactionsCount: 1,
+        transactionChildCountMap: [],
         uptimeCount: 0,
       },
     });
@@ -381,8 +425,7 @@ describe('useTraceMeta', () => {
         performanceIssuesCount: 2,
         spansCount: 2,
         spansCountMap: {},
-        transactionChildCountMap: {},
-        transactionsCount: 2,
+        transactionChildCountMap: [],
         uptimeCount: 0,
       },
     });
@@ -413,8 +456,7 @@ describe('useTraceMeta', () => {
         performanceIssuesCount: 0,
         spansCount: 0,
         spansCountMap: {},
-        transactionChildCountMap: {},
-        transactionsCount: 0,
+        transactionChildCountMap: [],
         uptimeCount: 0,
       },
     });
@@ -430,8 +472,7 @@ describe('useTraceMeta', () => {
         performanceIssuesCount: 1,
         spansCount: 1,
         spansCountMap: {},
-        transactionChildCountMap: {},
-        transactionsCount: 1,
+        transactionChildCountMap: [],
         uptimeCount: 0,
       },
     });
