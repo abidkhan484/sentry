@@ -96,12 +96,46 @@ export type TraceMeta = {
   transactions: number;
 };
 
-export type EAPTraceMeta = {
+type ResponseTraceMetaTransactionChildCount = {
+  count: number;
+  'transaction.id': string;
+};
+
+export type ResponseTraceMeta = {
   errors: number;
-  logs: number;
   performance_issues: number;
+  projects: number;
   span_count: number;
   span_count_map: Record<string, number>;
-  transaction_child_count_map: Record<string, number>;
-  uptime_checks: number;
+  transaction_child_count_map: ResponseTraceMetaTransactionChildCount[];
+  transactions: number;
+};
+
+export type EAPTraceMeta = {
+  errorsCount: number;
+  logsCount: number;
+  metricsCount: number;
+  performanceIssuesCount: number;
+  spansCount: number;
+  spansCountMap: Record<string, number>;
+  transactionChildCountMap: Record<string, number>;
+  transactionsCount: number;
+  uptimeCount: number;
+};
+
+type ResponseEAPTraceMetaTransactionChildCount = {
+  'count()': number;
+  'transaction.event_id': string;
+};
+
+export type ResponseEAPTraceMeta = {
+  errorsCount: number;
+  logsCount: number;
+  metricsCount: number;
+  performanceIssuesCount: number;
+  spansCount: number;
+  spansCountMap: Record<string, number>;
+  transactionChildCountMap: ResponseEAPTraceMetaTransactionChildCount[];
+  transactionsCount: number;
+  uptimeCount: number;
 };
