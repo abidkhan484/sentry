@@ -6,6 +6,10 @@ from typing import Literal
 from pydantic import BaseModel
 
 from sentry.preprod.api.models.project_preprod_build_details_models import BuildDetailsVcsInfo
+from sentry.preprod.api.models.snapshots.snapshot_status import (
+    ApprovalStatusLiteral,
+    ComparisonStateLiteral,
+)
 from sentry.preprod.models import PreprodArtifact
 
 
@@ -131,6 +135,11 @@ class SnapshotDetailsApiResponse(BaseModel):
     approval_info: SnapshotApprovalInfo | None = None
 
     diff_threshold: float | None = None
+
+    comparison_state: ComparisonStateLiteral | None = None
+    approval_status: ApprovalStatusLiteral | None = None
+    comparison_error_message: str | None = None
+    approvers: list[SnapshotApprover] = []
 
 
 # TODO: POST request in the future when we migrate away from current schemas
