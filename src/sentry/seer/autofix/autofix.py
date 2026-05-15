@@ -802,7 +802,14 @@ def trigger_legacy_autofix(
         args=[run_id, group.organization.id], countdown=timedelta(minutes=15).seconds
     )
 
-    group.update(seer_autofix_last_triggered=timezone.now())
+    now = timezone.now()
+    with transaction.atomic(using=router.db_for_write(Group)):
+        group.update(seer_autofix_last_triggered=now)
+        if isinstance(run_id, int):
+            SeerRun.objects.filter(
+                organization_id=group.organization.id,
+                seer_run_state_id=run_id,
+            ).update(last_triggered_at=now)
 
     # log billing event for seer autofix
     quotas.backend.record_seer_run(
