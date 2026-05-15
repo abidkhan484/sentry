@@ -25,11 +25,11 @@ from sentry.seer.autofix.constants import (
 from sentry.seer.autofix.issue_summary import referrer_map
 from sentry.seer.autofix.utils import AutofixStoppingPoint, bulk_read_preferences_from_sentry_db
 from sentry.seer.models.night_shift import (
-    NightShiftRunResultKind,
     SeerNightShiftRun,
     SeerNightShiftRunResult,
 )
 from sentry.seer.models.project_repository import SeerProjectRepository
+from sentry.seer.models.workflow import SeerWorkflowConfig, SeerWorkflowStrategy
 from sentry.tasks.base import instrumented_task
 from sentry.tasks.seer.night_shift.agentic_triage import agentic_triage_strategy
 from sentry.tasks.seer.night_shift.models import TriageAction, TriageResult
@@ -206,6 +206,11 @@ def run_night_shift_for_org(
         {"organization_id": organization.id, "organization_slug": organization.slug}
     )
 
+    workflow_config = SeerWorkflowConfig.get_or_create_for_strategy(
+        organization_id=organization.id,
+        strategy=SeerWorkflowStrategy.AGENTIC_TRIAGE,
+    )
+
     extras: dict[str, object] = {"options": dict(resolved_options)}
     if project_ids is not None:
         extras["target_project_ids"] = project_ids
@@ -214,6 +219,7 @@ def run_night_shift_for_org(
 
     run = SeerNightShiftRun.objects.create(
         organization=organization,
+        workflow_config=workflow_config,
         extras=extras,
     )
 
@@ -541,7 +547,7 @@ def _run_autofix_for_candidates(
         results.append(
             SeerNightShiftRunResult(
                 run=run,
-                kind=NightShiftRunResultKind.AGENTIC_TRIAGE,
+                kind=SeerWorkflowStrategy.AGENTIC_TRIAGE,
                 group=c.group,
                 seer_run_id=str(seer_run_id),
                 extras={"action": str(c.action)},
